@@ -39,7 +39,7 @@ import com.tencent.kuikly.core.module.RouterModule
 import com.tencent.kuikly.core.reactive.handler.observable
 import com.tencent.kuikly.core.reactive.handler.observableList
 import com.tencent.kuikly.core.timer.CallbackRef
-import com.tencent.kuikly.core.timer.cancelPostCallback
+import com.tencent.kuikly.core.timer.clearTimeout
 import com.tencent.kuikly.core.timer.setTimeout
 import com.tencent.kuikly.core.views.Scroller
 import com.tencent.kuikly.core.views.Text
@@ -688,7 +688,7 @@ internal class WidgetGridDemoPage : BasePager() {
             card.offsetX = oldPos.x - newPos.x
             card.offsetY = oldPos.y - newPos.y
             card.shakeAngle = 0f  // 重置抖动角度
-            // needsAnimation = true 会让抖动定时器跳过这个卡片
+            // needsAnimation = true 让 attr 块选择弹性动画（而非抖动动画）来过渡位移
             card.needsAnimation = true
             card.animationKey++
         }
@@ -736,7 +736,7 @@ internal class WidgetGridDemoPage : BasePager() {
     
     // 停止抖动动画
     private fun stopShakeAnimation() {
-        shakeTimerRef?.let { cancelPostCallback(it) }
+        shakeTimerRef?.let { clearTimeout(it) }
         shakeTimerRef = null
         // 重置所有卡片的抖动角度
         cardList.forEach { card ->
@@ -752,10 +752,10 @@ internal class WidgetGridDemoPage : BasePager() {
             shakeDirection = -shakeDirection
             val angle = shakeAngleBase * shakeDirection
             
-            // 更新所有非拖拽中、非位移动画中的卡片的抖动角度
+            // 更新所有非拖拽中的卡片的抖动角度
             cardList.forEachIndexed { index, card ->
-                // 跳过正在拖拽或正在进行位置动画的卡片
-                if (!card.isDragging && !card.needsAnimation) {
+                // 跳过正在拖拽的卡片
+                if (!card.isDragging) {
                     // 给每个卡片一个略微不同的角度，让抖动看起来更自然
                     val offset = if (index % 2 == 0) shakeAngleOffset else -shakeAngleOffset
                     card.shakeAngle = angle + offset
@@ -976,7 +976,7 @@ internal class WidgetCardView : ComposeView<WidgetCardAttr, WidgetCardEvent>() {
                     ctx.isTouching = false
                     // 取消长按定时器
                     ctx.longPressCallback?.let { callback ->
-                        cancelPostCallback(callback)
+                        clearTimeout(callback)
                         ctx.longPressCallback = null
                     }
                 }
@@ -984,7 +984,7 @@ internal class WidgetCardView : ComposeView<WidgetCardAttr, WidgetCardEvent>() {
                     // 开始拖拽时取消长按定时器
                     if (params.state == "start") {
                         ctx.longPressCallback?.let { callback ->
-                            cancelPostCallback(callback)
+                            clearTimeout(callback)
                             ctx.longPressCallback = null
                         }
                     }
