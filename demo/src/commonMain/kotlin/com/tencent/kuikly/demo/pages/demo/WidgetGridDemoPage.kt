@@ -215,7 +215,7 @@ internal class WidgetGridDemoPage : BasePager() {
                                 longPressDelay = ctx.longPressDelay
                             }
 
-                            // 基础定位（不带动画，确保位置更新立即生效）
+                            // 基础定位（扩展尺寸以完整容纳删除按钮，避免裁剪和点击失效）
                             attr {
                                 // 实时查找卡片在列表中的当前索引（列表变化时会自动更新）
                                 val currentIndex = ctx.cardList.indexOf(cardData)
@@ -225,11 +225,12 @@ internal class WidgetGridDemoPage : BasePager() {
                                 } else {
                                     ctx.getCardWidth()
                                 }
+                                val deleteOverflow = WidgetCardView.DELETE_OVERFLOW
                                 absolutePosition(
-                                    top = pos.y,
-                                    left = pos.x
+                                    top = pos.y - deleteOverflow,
+                                    left = pos.x - deleteOverflow
                                 )
-                                size(width, ctx.cardHeight)
+                                size(width + deleteOverflow, ctx.cardHeight + deleteOverflow)
                                 zIndex(if (cardData.isDragging) 100 else 0)
                             }
                             
@@ -877,6 +878,11 @@ internal class WidgetCardEvent : ComposeEvent() {
 // 卡片视图组件
 internal class WidgetCardView : ComposeView<WidgetCardAttr, WidgetCardEvent>() {
 
+    companion object {
+        /** 删除按钮超出卡片边界的距离（abs(deleteButtonOffset)） */
+        const val DELETE_OVERFLOW = 8f
+    }
+
     // 用于模拟长按的定时器
     private var longPressCallback: CallbackRef? = null
     private var isTouching by observable(false)
@@ -884,12 +890,10 @@ internal class WidgetCardView : ComposeView<WidgetCardAttr, WidgetCardEvent>() {
     override fun body(): ViewBuilder {
         val ctx = this
         return {
-            // 外层包装（不设置背景和圆角，让删除按钮可以溢出显示）
-            
-            // 卡片主体（带背景和圆角）
+            // 卡片主体（带背景和圆角，向内缩进 8dp 留出删除按钮空间）
             View {
                 attr {
-                    absolutePosition(top = 0f, left = 0f, right = 0f, bottom = 0f)
+                    absolutePosition(top = DELETE_OVERFLOW, left = DELETE_OVERFLOW, right = 0f, bottom = 0f)
                     backgroundColor(Color(0xFF2C2C2EL))
                     borderRadius(16f)
                     // 触摸时轻微变暗
@@ -935,11 +939,11 @@ internal class WidgetCardView : ComposeView<WidgetCardAttr, WidgetCardEvent>() {
                 }
             }
 
-            // 编辑模式下的删除按钮（在外层，不受卡片圆角裁剪）
+            // 编辑模式下的删除按钮（定位在 wrapper 的 (0,0)，完全在 bounds 内，不会被裁剪）
             vif({ ctx.attr.editing }) {
                 View {
                     attr {
-                        absolutePosition(top = -8f, left = -8f)
+                        absolutePosition(top = 0f, left = 0f)
                         size(24f, 24f)
                         backgroundColor(Color(0xFFFF3B30L))
                         borderRadius(12f)
